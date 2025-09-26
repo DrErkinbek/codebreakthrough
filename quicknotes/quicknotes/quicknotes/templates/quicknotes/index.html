@@ -1,0 +1,18 @@
+{% extends "quicknotes/quicknotes.html" %}
+{% block title %}My notes{% endblock %}
+{% block body %}This is a list of my notes{% endblock %}
+
+{% block body %}
+<ul class="note-list">
+	{% for note in notes %}
+	<li><a class="note=card" href='/notes/ {{ note.id }}/'>{{ note.title }}</a></li>
+	{% endfor %}
+</ul>
+
+<form action="{% url 'add'}" method="POST" enctype="multipart/form-data" class="upload-form">
+	{% csrf_token %}
+	{{ form }}
+	<br />
+	<button>Add note</button>
+</form>
+{% endblock %}
