@@ -1,0 +1,15 @@
+{% extends "quicknotes_site/base.html" %}
+{% block title %}My notes{% endblock %}
+
+{% block body %}
+<form action="{% url 'edit' note.id %}" method="POST", enctype="multipart/form-data" class="edit-form">
+	{% csrf_token %}
+	{{ form }}
+	<button class="btn btn-submit">Save note</button>
+
+	<form action="{% url 'delete' note.id %}" method="POST", enctype="multipart/form-data">
+		{% csrf_token %}
+		<button class="btn btn-delete">Delete note</button>
+	</form>
+	<a href="{% 'notes' %}">All notes</a>
+{% endblokc %}

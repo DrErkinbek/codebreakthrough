@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>{% block title %}Quicknotes{% endblock%}</title>
+
+		{% load static %}
+		<link rel="stylesheet" href="{% static 'quicknotes_site/styles.css'%}">
+	</head>
+	<body>
+		{% block body %}{% endblock %}
+	</body>
+</html>
