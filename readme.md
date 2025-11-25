@@ -47,3 +47,27 @@
 - https – hyper text transfer protocol secured
 - ssl/tls – certificates
 - AES enryption
+
+### Docker - virtualization technology.
+- Docker container orchestration is the automated management, coordination, and scheduling of multiple containers that run applications across clusters of machines.
+
+In simple terms:
+When you have many Docker containers (for example, web servers, databases, APIs) running across several servers, orchestration tools help you manage them — making sure they start, stop, scale, and communicate properly.
+
+Docker Compose is a tool for defining and running multi-container Docker Application using simple YAML configuration file.
+
+Docker Images
+contained software
+not running
+snap shot
+blue print
+Instanstiated -> container
+
+### Database Design
+DDL -  Creating Structure [	CREATE, ALTER, DROP ]
+DML - Querying data [SELECT, UPDATE, DELETE INSERT ]
+
+### Database Relationship types
+1:1 one-to-one
+1:m one-to-many
+m:m many-to-many
