@@ -26,10 +26,11 @@ const users = [
 	}
 ]
 
-// users.map((user) => {
-// 	console.log(user.birthdate.getFullYear());
-// });
+const example = () => {
+	console.log('this is function')
+}
 
 users.map((user) => {
+	example();
 	console.log(user.age || new Date());
 })
