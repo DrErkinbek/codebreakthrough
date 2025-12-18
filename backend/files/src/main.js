@@ -1,9 +1,32 @@
-// import { exec } from 'child_process';
-import open from 'open';
+import open, { apps } from 'open';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 const args = process.argv.slice(2);
 const command = args[0];
 const favorite = args[1];
 const url = args[2];
+
+function checkBrowser() {
+	const browser = process.env?.BROWSER?.toLocaleLowerCase();
+	let appName = browser;
+	console.log(appName);
+
+	switch (browser) {
+		case 'chrome':
+			appName = apps.chrome;
+			break;
+		case 'firefox':
+			appName = apps.firefox;
+			break;
+		case 'edge':
+			appName = apps.edge;
+			break;
+	}
+	return appName;
+
+}
 
 function displayMenu() {
 	console.log('open <favorite> 		: Open a saved favorite');
@@ -27,7 +50,14 @@ function openFavorite(favorite) {
 
 
 	console.log('opening', url);
-	open(url);
+	const appName = checkBrowser();
+
+	if (appName) {
+		open(url, {app: {name: appName }});
+	} else {
+		open(url);
+	}
+
 }
 
 function add(favorite, url) {
@@ -37,6 +67,8 @@ function add(favorite, url) {
 function rm() {
 	console.log('rm', favorite);
 }
+
+console.log('Opening with', process.env.BROWSER);
 
 if (!command || !favorite || command === 'help') {
 	displayMenu();
