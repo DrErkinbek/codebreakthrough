@@ -1,12 +1,46 @@
 import open, { apps } from 'open';
 import dotenv from 'dotenv';
+import Database from 'better-sqlite3';
+import fs from 'fs';
 
+let db;
+const dbPath = 'favorites.db'
 dotenv.config();
 
 const args = process.argv.slice(2);
 const command = args[0];
 const favorite = args[1];
 const url = args[2];
+
+function init() {
+	console.log('initializing database...');
+	db = new Database(dbPath);
+
+	const createTable = `
+		CREATE TABLE IF NOT EXISTS favorites (
+			id INTEGER PRIMARY KEY,
+			name TEXT NOT NULL,
+			url TEXT NOT NULL
+		)
+	`;
+
+	db.exec(createTable);
+
+	const data = [
+		{ name: 'goog', url: 'https://google.com' },
+		{ name: 'social', url: 'https://instagram.com' },
+		{ name: 'news', url: 'https://yahoo.com' }
+	];
+
+	const insertData = db.prepare(
+		'INSERT INTO favorites (name, url) VALUES (?, ?)'
+	);
+
+	data.forEach((favorite) => {
+		insertData.run(favorite.name, favorite.url);
+	});
+
+}
 
 function checkBrowser() {
 	const browser = process.env?.BROWSER?.toLocaleLowerCase();
@@ -35,20 +69,9 @@ function displayMenu() {
 }
 
 function openFavorite(favorite) {
-	let url;
+	const row = db.prepare('SELECT * FROM favorites WHERE name = ?').get(favorite);
 
-	if (favorite === 'goog') {
-		url = 'https://google.com';
-	} else if (favorite === 'social') {
-		url = 'https://instagram.com';
-	} else if (favorite === 'code') {
-		url = 'https://leetcode.com';
-	} else {
-		console.log('shortcut', shortcut, 'does not exist');
-		return;
-	}
-
-
+	const url = row.url;
 	console.log('opening', url);
 	const appName = checkBrowser();
 
@@ -68,7 +91,11 @@ function rm() {
 	console.log('rm', favorite);
 }
 
-console.log('Opening with', process.env.BROWSER);
+if (!FileSystem.existsSync(dbPath)) {
+	init();
+} else {
+	db = new Database(dbPath);
+}
 
 if (!command || !favorite || command === 'help') {
 	displayMenu();
