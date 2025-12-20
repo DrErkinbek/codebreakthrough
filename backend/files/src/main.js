@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import open, { apps } from 'open';
 import dotenv from 'dotenv';
 import Database from 'better-sqlite3';
@@ -63,13 +64,19 @@ function checkBrowser() {
 }
 
 function displayMenu() {
+	console.log('ls						: List all favorites')
 	console.log('open <favorite> 		: Open a saved favorite');
-	console.log('add <favorite> <url> 	: add a new favorite for some URL');
+	console.log('add <favorite> <url> 	: Add a new favorite for some URL');
 	console.log('rm <favorite> 			: remove a saved favorite.');
 }
 
 function openFavorite(favorite) {
 	const row = db.prepare('SELECT * FROM favorites WHERE name = ?').get(favorite);
+
+	if (!row) {
+		console.log('Favorite not found.');
+		process.exit(1);
+	}
 
 	const url = row.url;
 	console.log('opening', url);
@@ -84,34 +91,74 @@ function openFavorite(favorite) {
 }
 
 function add(favorite, url) {
+	db.prepare('INSERT INTO favorites (name, url) VALUES (?, ?)').run(favorite, url);
+
 	console.log('adding', favorite, url);
 }
 
-function rm() {
-	console.log('rm', favorite);
+function rm(favorite) {
+	db.prepare('DELETE FROM favorites WHERE name = ? ').run(favorite)
+	console.log('removing', favorite);
 }
 
-if (!FileSystem.existsSync(dbPath)) {
+function ls() {
+	const favorites = db.prepare('SELECT *FROM favorites').all();
+	console.log('All favorites:');
+	favorites.forEach((favorite) => {
+		console.log(`${favorite.name}: ${favorite.url}`);
+	});
+}
+
+if (!fs.existsSync(dbPath)) {
 	init();
 } else {
 	db = new Database(dbPath);
 }
 
-if (!command || !favorite || command === 'help') {
+const argCount = args.length;
+
+/*if (argCount === 0 || !['ls', 'open', 'rm', 'add'].includes(command)) {
 	displayMenu();
-} else {
-	switch (command) {
-		case 'open':
-			openFavorite(favorite);
-			break;
-		case 'add':
-			if (!url) {
-				throw new Error('url required');
-			}
-			add(favorite, url);
-			break;
-		case 'rm':
-			rm(favorite);
-			break;
-	}
+	process.exit(1);
 }
+
+switch (command) {
+	case 'ls':
+		ls();
+		break;
+	case 'open':
+		if (argCount < 2) {
+			displayMenu();
+			process.exit(1);
+		}
+		openFavorite(favorite);
+		break;
+	case 'add':
+		if (argCount < 3) {
+			displayMenu();
+			process.exit(1);
+		}
+		add(favorite, url);
+		break;
+	case 'rm':
+		if (argCount < 2) {
+			displayMenu();
+			process.exit(1);
+		}
+		rm(favorite);
+		break;
+}*/
+
+const commands = {
+	ls: { f: ls, argCount: 1 },
+	open: { f: openFavorite, argCount: 2 },
+	rm: { f: rm, argCount: 1 },
+	add: { f: add, argCount: 3 },
+};
+
+if (argCount === 0 || !commands[command] || argCount < commands[command].argCount) {
+	displayMenu();
+	process.exit(1);
+}
+
+commands[command].f(favorite, url);

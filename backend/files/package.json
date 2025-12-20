@@ -6,6 +6,9 @@
   "author": "erik",
   "type": "module",
   "main": "index.js",
+  "bin": {
+    "favs": "src/main.js"
+  },
   "scripts": {
     "start": "node src/main.js"
   },
