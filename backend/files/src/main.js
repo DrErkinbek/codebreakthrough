@@ -1,164 +1,86 @@
 #!/usr/bin/env node
 import open, { apps } from 'open';
 import dotenv from 'dotenv';
-import Database from 'better-sqlite3';
 import fs from 'fs';
+import * as SDK from './lib/sdk.js';
 
-let db;
-const dbPath = 'favorites.db'
 dotenv.config();
+
+SDK.setBaseURL(process.env.API_URL || 'http://127.0.0.1:3000');
 
 const args = process.argv.slice(2);
 const command = args[0];
 const favorite = args[1];
 const url = args[2];
 
-function init() {
-	console.log('initializing database...');
-	db = new Database(dbPath);
+const favorites = await SDK.getFavorites();
 
-	const createTable = `
-		CREATE TABLE IF NOT EXISTS favorites (
-			id INTEGER PRIMARY KEY,
-			name TEXT NOT NULL,
-			url TEXT NOT NULL
-		)
-	`;
-
-	db.exec(createTable);
-
-	const data = [
-		{ name: 'goog', url: 'https://google.com' },
-		{ name: 'social', url: 'https://instagram.com' },
-		{ name: 'news', url: 'https://yahoo.com' }
-	];
-
-	const insertData = db.prepare(
-		'INSERT INTO favorites (name, url) VALUES (?, ?)'
-	);
-
-	data.forEach((favorite) => {
-		insertData.run(favorite.name, favorite.url);
-	});
-
-}
+/* ---------- Browser ---------- */
 
 function checkBrowser() {
-	const browser = process.env?.BROWSER?.toLocaleLowerCase();
-	let appName = browser;
-	console.log(appName);
-
-	switch (browser) {
-		case 'chrome':
-			appName = apps.chrome;
-			break;
-		case 'firefox':
-			appName = apps.firefox;
-			break;
-		case 'edge':
-			appName = apps.edge;
-			break;
-	}
-	return appName;
-
+  const browser = process.env?.BROWSER?.toLowerCase();
+  switch (browser) {
+    case 'chrome': return apps.chrome;
+    case 'firefox': return apps.firefox;
+    case 'edge': return apps.edge;
+    default: return null;
+  }
 }
 
-function displayMenu() {
-	console.log('ls						: List all favorites')
-	console.log('open <favorite> 		: Open a saved favorite');
-	console.log('add <favorite> <url> 	: Add a new favorite for some URL');
-	console.log('rm <favorite> 			: remove a saved favorite.');
-}
+/* ---------- Commands ---------- */
 
-function openFavorite(favorite) {
-	const row = db.prepare('SELECT * FROM favorites WHERE name = ?').get(favorite);
+const openFavorite = async (name) => {
+  const fav = favorites.find(f => f.name === name);
+  if (!fav) {
+    console.log(`Favorite ${name} does not exist`);
+    process.exit(1);
+  }
 
-	if (!row) {
-		console.log('Favorite not found.');
-		process.exit(1);
-	}
-
-	const url = row.url;
-	console.log('opening', url);
-	const appName = checkBrowser();
-
-	if (appName) {
-		open(url, {app: {name: appName }});
-	} else {
-		open(url);
-	}
-
-}
-
-function add(favorite, url) {
-	db.prepare('INSERT INTO favorites (name, url) VALUES (?, ?)').run(favorite, url);
-
-	console.log('adding', favorite, url);
-}
-
-function rm(favorite) {
-	db.prepare('DELETE FROM favorites WHERE name = ? ').run(favorite)
-	console.log('removing', favorite);
-}
-
-function ls() {
-	const favorites = db.prepare('SELECT *FROM favorites').all();
-	console.log('All favorites:');
-	favorites.forEach((favorite) => {
-		console.log(`${favorite.name}: ${favorite.url}`);
-	});
-}
-
-if (!fs.existsSync(dbPath)) {
-	init();
-} else {
-	db = new Database(dbPath);
-}
-
-const argCount = args.length;
-
-/*if (argCount === 0 || !['ls', 'open', 'rm', 'add'].includes(command)) {
-	displayMenu();
-	process.exit(1);
-}
-
-switch (command) {
-	case 'ls':
-		ls();
-		break;
-	case 'open':
-		if (argCount < 2) {
-			displayMenu();
-			process.exit(1);
-		}
-		openFavorite(favorite);
-		break;
-	case 'add':
-		if (argCount < 3) {
-			displayMenu();
-			process.exit(1);
-		}
-		add(favorite, url);
-		break;
-	case 'rm':
-		if (argCount < 2) {
-			displayMenu();
-			process.exit(1);
-		}
-		rm(favorite);
-		break;
-}*/
-
-const commands = {
-	ls: { f: ls, argCount: 1 },
-	open: { f: openFavorite, argCount: 2 },
-	rm: { f: rm, argCount: 1 },
-	add: { f: add, argCount: 3 },
+  const app = checkBrowser();
+  app ? open(fav.url, { app: { name: app } }) : open(fav.url);
 };
 
-if (argCount === 0 || !commands[command] || argCount < commands[command].argCount) {
-	displayMenu();
-	process.exit(1);
+const add = async (name, url) => {
+  const id = await SDK.addFavorite(name, url);
+  console.log('added:', name, url, id);
+};
+
+const rm = async (name) => {
+  const fav = favorites.find(f => f.name === name);
+  if (!fav) {
+    console.log(`Favorite ${name} does not exist`);
+    process.exit(1);
+  }
+  await SDK.deleteFavorite(fav.id);
+  console.log('removed:', name);
+};
+
+const ls = async () => {
+  console.log('All favorites:');
+  favorites.forEach(f => console.log(`${f.name}: ${f.url}`));
+};
+
+/* ---------- Command map ---------- */
+
+const commands = {
+  ls: { argCount: 0, f: ls },
+  open: { argCount: 1, f: openFavorite },
+  add: { argCount: 2, f: add },
+  rm: { argCount: 1, f: rm },
+};
+
+function displayMenu() {
+  console.log('ls                   : List all favorites');
+  console.log('open <favorite>      : Open a saved favorite');
+  console.log('add <favorite> <url> : Add a new favorite');
+  console.log('rm <favorite>        : Remove a favorite');
 }
 
-commands[command].f(favorite, url);
+/* ---------- Dispatch ---------- */
+
+if (!command || !commands[command] || args.length - 1 < commands[command].argCount) {
+  displayMenu();
+  process.exit(1);
+}
+
+await commands[command].f(favorite, url);
