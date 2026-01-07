@@ -1,5 +1,5 @@
 // @ts-nocheck
-import express from "express";
+import express, { Request, Response } from "express";
 import Database from "better-sqlite3";
 const db = new Database('favorites.db');
 
@@ -36,7 +36,8 @@ router.get('/', authenticate, (req, res) => {
 	res.json({ favorites  });
 });
 
-router.post('/', (req, res) => {
+router.post('/', (req: Request<any, any, Favorite>,
+	res: Response<{ id: number | bigint } | { error: string }> ) => {
 	const newFavorite: Favorite = req.body;
 
 	if (!newFavorite.name) {
@@ -51,7 +52,8 @@ router.post('/', (req, res) => {
 	res.status(201).json({ id: result.lastInsertRowid });
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id',( req: Request<{ id: string }>,
+		res: Response< { favorite: Favorite } > ) => {
 	try {
 		const id = parseInt(req.params.id);
 		const favorite = db.prepare('SELECT * FROM favorites WHERE id = ?').get(id) as Favorite;
@@ -68,7 +70,9 @@ router.get('/:id', (req, res) => {
 
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', (
+	req: Request<{ id: string }>,
+	res: Response<string | { error: string }> ) => {
 	const id = parseInt(req.params.id);
 	const result = db.prepare('DELETE FROM favorites WHERE id = ?').run(id);
 
@@ -79,42 +83,37 @@ router.delete('/:id', (req, res) => {
 	res.sendStatus(200);
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', (req: Request<{ id: string }, {}, Favorite>,
+	res: Response<{ favorite: Favorite } | { error: string }>) => {
 	const id = parseInt(req.params.id);
-	const { name, url } = req.body;
+	const newFavorite = req.body;
 
-	if (!name) {
+	if (!newFavorite.name) {
 		return res.status(400).json({ error })
 	}
-	if (!url) {
+	if (!newFavorite.url) {
 		return res.status(400).json({ error })
 	}
 
-	const result = db.prepare('UPDATE favorites SET name=?, url=? WHERE id=?').run(name, url, id);
+	const result = db.prepare('UPDATE favorites SET name=?, url=? WHERE id=?').run(newFavorite.name, newFavorite.url, id);
 
 	if (!result.changes) {
 		return res.status(404).json({ error: 'Favorite not found' });
 	}
 
-	res.sendStatus(200);
+	const favorite = db.prepare('SELECT * FROM favorites WHERE id = ?').get(id) as Favorite;
+
+	res.sendStatus(200).send({ favorite });
 });
 
-router.patch('/:id', (req, res) => {
+router.patch('/:id', (req: Request<{ id: string }, any, Favorite>,
+	res: Response<string | { error: string }>) => {
 	const id = parseInt(req.params.id);
 	const { name, url } = req.body;
 
 	if (!name && !url) {
 		return res.status(400).json({ error: "Name or URL required" });
 	}
-
-	// const favorite = db.prepare('SELECT * FROM favorites WHERE id = ?').get(id);
-
-	// if (!favorite) {
-	// 	return res.status(404).json({ error: 'Favorite not found' });
-	// };
-
-	// const newName = name || favorite.name;
-	// const newUrl = url || favorite.url;
 
 	const result = db.prepare('UPDATE favorites SET name=COALESCE(?, name), url=COALESCE(?, url) WHERE id=?').run(name, url, id);
 
@@ -124,7 +123,6 @@ router.patch('/:id', (req, res) => {
 
 	res.sendStatus(200);
 });
-
 
 
 export default router;
