@@ -4,21 +4,28 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import * as SDK from './lib/sdk.js';
 
+SDK.setBaseURL('http://127.0.0.1:3000');
 dotenv.config();
-
-SDK.setBaseURL(process.env.API_URL || 'http://127.0.0.1:3000');
 
 const args = process.argv.slice(2);
 const command = args[0];
 const favorite = args[1];
 const url = args[2];
 
-const favorites = await SDK.getFavorites();
+interface Favorite {
+  id: number;
+  name: string;
+  url: string;
+}
+
+const favorites: Favorite[] = await SDK.getFavorites();
 
 /* ---------- Browser ---------- */
 
 function checkBrowser() {
-  const browser = process.env?.BROWSER?.toLowerCase();
+  const browser = process.env?.BROWSER?.toLocaleLowerCase();
+  let appName: string | readonly string[] | undefined = browser!;
+
   switch (browser) {
     case 'chrome': return apps.chrome;
     case 'firefox': return apps.firefox;
@@ -29,29 +36,42 @@ function checkBrowser() {
 
 /* ---------- Commands ---------- */
 
-const openFavorite = async (name) => {
-  const fav = favorites.find(f => f.name === name);
-  if (!fav) {
+function openFavorite(name: string){
+  const favToOpen = favorites.find((fav) => fav.name === name);
+
+  if (!favToOpen){
     console.log(`Favorite ${name} does not exist`);
-    process.exit(1);
+    process.exit(1)
   }
 
-  const app = checkBrowser();
-  app ? open(fav.url, { app: { name: app } }) : open(fav.url);
+  const url = favToOpen.url;
+  console.log('opening', url);
+  const appName = checkBrowser();
+
+  if (appName){
+    open(url, { app: { name: appName } });
+  } else{
+    open(url);
+  }
 };
 
-const add = async (name, url) => {
+const add = async (name: string, url: string) => {
   const id = await SDK.addFavorite(name, url);
-  console.log('added:', name, url, id);
+  console.log('added:', favorite, url);
+  if (!id){
+    console.log(`Failed to add favorite ${name}`);
+    process.exit(1);
+  }
 };
 
-const rm = async (name) => {
-  const fav = favorites.find(f => f.name === name);
-  if (!fav) {
+const rm = async (name: string) => {
+  const favToDelete = favorites.find((fav: Favorite) => fav.name === name);
+
+  if (!favToDelete){
     console.log(`Favorite ${name} does not exist`);
     process.exit(1);
   }
-  await SDK.deleteFavorite(fav.id);
+  await SDK.deleteFavorite(favToDelete.id);
   console.log('removed:', name);
 };
 
@@ -61,9 +81,10 @@ const ls = async () => {
 };
 
 /* ---------- Command map ---------- */
+const argCount = args.length;
 
 const commands = {
-  ls: { argCount: 0, f: ls },
+  ls: {f: ls, argCount: 1 },
   open: { argCount: 1, f: openFavorite },
   add: { argCount: 2, f: add },
   rm: { argCount: 1, f: rm },
