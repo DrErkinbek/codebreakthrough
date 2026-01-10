@@ -20,6 +20,7 @@
     "test": "tsc && node dist/tests/sdk.js"
   },
   "dependencies": {
+    "@types/express": "^5.0.6",
     "better-sqlite3": "^12.5.0",
     "dotenv": "^17.2.3",
     "open": "^11.0.0"

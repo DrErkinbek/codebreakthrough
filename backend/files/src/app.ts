@@ -2,6 +2,7 @@
 import open, { apps } from 'open';
 import dotenv from 'dotenv';
 import fs from 'fs';
+import { Favorite } from './types.js';
 import * as SDK from './lib/sdk.js';
 
 SDK.setBaseURL('http://127.0.0.1:3000');
@@ -12,11 +13,7 @@ const command = args[0];
 const favorite = args[1];
 const url = args[2];
 
-interface Favorite {
-  id: number;
-  name: string;
-  url: string;
-}
+
 
 const favorites: Favorite[] = await SDK.getFavorites();
 
@@ -83,12 +80,21 @@ const ls = async () => {
 /* ---------- Command map ---------- */
 const argCount = args.length;
 
+interface Command {
+  f: Function;
+  argCount: number;
+}
+
+interface Commands {
+  [key: string]: Command;
+}
+
 const commands = {
   ls: {f: ls, argCount: 1 },
-  open: { argCount: 1, f: openFavorite },
-  add: { argCount: 2, f: add },
-  rm: { argCount: 1, f: rm },
-};
+  open: {f: openFavorite, argCount: 2  },
+  add: { f: add, argCount: 3 },
+  rm: { f: rm, argCount: 4 },
+} as Commands;
 
 function displayMenu() {
   console.log('ls                   : List all favorites');
@@ -98,8 +104,8 @@ function displayMenu() {
 }
 
 /* ---------- Dispatch ---------- */
-
-if (!command || !commands[command] || args.length - 1 < commands[command].argCount) {
+if (argCount === 0 || !commands[command]
+  || argCount < commands[command].argCount) {
   displayMenu();
   process.exit(1);
 }
